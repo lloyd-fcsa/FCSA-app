@@ -18,46 +18,45 @@ function timeAgo(date) {
 
 export default function CommunityPost() {
   const { id } = useParams()
-  const numId = parseInt(id)
   const { user } = useAuth()
   const { posts, myVotes, vote } = useCommunity()
-  const cachedPost = posts.find(p => p.id === numId)
-  const cachedVote = myVotes[numId]
 
-  const [post, setPost] = useState(cachedPost || null)
-  const [myVote, setMyVote] = useState(cachedVote || null)
+  const contextPost = posts.find(p => p.id === parseInt(id))
+  const contextVote = myVotes[parseInt(id)]
+
+  const [fallbackPost, setFallbackPost] = useState(null)
+  const [fallbackVote, setFallbackVote] = useState(null)
   const [comments, setComments] = useState([])
-  const [loading, setLoading] = useState(!cachedPost)
+  const [loading, setLoading] = useState(!contextPost)
   const [notFound, setNotFound] = useState(false)
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  const post = contextPost || fallbackPost
+  const myVote = contextVote || fallbackVote
+
   useEffect(() => {
-    if (!supabase) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(false)
-      return
-    }
+    if (!supabase) { setLoading(false); return }
     let alive = true
     supabase.from('community_posts').select('id, title, body, author_id, created_at, status, score, tags').eq('id', id).maybeSingle().then(({ data }) => {
       if (!alive) return
       if (!data || (data.status !== 'approved' && data.author_id !== user?.id)) {
-        setNotFound(true)
-      } else {
-        setPost(data)
+        if (!contextPost) setNotFound(true)
+      } else if (!contextPost) {
+        setFallbackPost(data)
       }
       setLoading(false)
     })
     return () => { alive = false }
-  }, [id, user])
+  }, [id, user, contextPost])
 
   useEffect(() => {
     if (!supabase || !user) return
     supabase.from('community_votes').select('vote_type').eq('post_id', id).eq('user_id', user.id).maybeSingle().then(({ data }) => {
-      if (data) setMyVote(data.vote_type)
+      if (data && !contextVote) setFallbackVote(data.vote_type)
     })
-  }, [id, user])
+  }, [id, user, contextVote])
 
   useEffect(() => {
     if (!supabase) return
@@ -81,13 +80,8 @@ export default function CommunityPost() {
     setSubmitting(true)
     setError('')
     const { error: err } = await supabase.from('community_comments').insert({ post_id: id, body: body.trim() })
-    if (err) {
-      setError(err.message)
-      setSubmitting(false)
-    } else {
-      setBody('')
-      setSubmitting(false)
-    }
+    if (err) { setError(err.message); setSubmitting(false) }
+    else { setBody(''); setSubmitting(false) }
   }
 
   async function handleDelete() {
@@ -100,19 +94,6 @@ export default function CommunityPost() {
     const reason = prompt('Why are you flagging this post? (optional)')
     if (reason === null) return
     await supabase.rpc('flag_post', { p_post_id: parseInt(id), p_reason: reason || '' })
-  }
-
-  async function handleVote(voteType) {
-    if (!user) return
-    const existing = myVote
-    let delta
-    if (!existing) delta = voteType === 'up' ? 1 : -1
-    else if (existing === voteType) delta = voteType === 'up' ? -1 : 1
-    else delta = voteType === 'up' ? 2 : -2
-    setPost(prev => prev ? { ...prev, score: (prev.score || 0) + delta } : prev)
-    if (!existing || existing !== voteType) setMyVote(voteType)
-    else setMyVote(null)
-    await vote(numId, voteType)
   }
 
   if (loading) {
@@ -139,11 +120,11 @@ export default function CommunityPost() {
         <article className="news-post" style={{ marginTop: 10 }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0, minWidth: 40 }}>
-              <button type="button" onClick={() => handleVote('up')} disabled={!user} style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'up' ? 'var(--accent)' : '#ccc', lineHeight: 0 }} aria-label="Upvote">
+              <button type="button" onClick={() => vote(parseInt(id), 'up')} disabled={!user} style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'up' ? 'var(--accent)' : '#ccc', lineHeight: 0 }} aria-label="Upvote">
                 <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 4 4 16h16z"/></svg>
               </button>
               <span style={{ fontWeight: 900, fontSize: '1.1rem', lineHeight: 1.2 }}>{post.score ?? 0}</span>
-              <button type="button" onClick={() => handleVote('down')} disabled={!user} style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'down' ? 'var(--accent)' : '#ccc', lineHeight: 0 }} aria-label="Downvote">
+              <button type="button" onClick={() => vote(parseInt(id), 'down')} disabled={!user} style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'down' ? 'var(--accent)' : '#ccc', lineHeight: 0 }} aria-label="Downvote">
                 <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 20 4 8h16z"/></svg>
               </button>
             </div>
