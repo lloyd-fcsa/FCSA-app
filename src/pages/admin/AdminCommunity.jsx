@@ -19,12 +19,12 @@ export default function AdminCommunity() {
     Promise.all([
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, score, tags')
+        .select('id, title, body, author_id, created_at, score, tags, flagged')
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, score, tags')
+        .select('id, title, body, author_id, created_at, score, tags, flagged')
         .eq('status', 'approved')
         .order('created_at', { ascending: false }),
     ]).then(([pendingRes, approvedRes]) => {
@@ -41,12 +41,12 @@ export default function AdminCommunity() {
     const [pendingRes, approvedRes] = await Promise.all([
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, score, tags')
+        .select('id, title, body, author_id, created_at, score, tags, flagged')
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, score, tags')
+        .select('id, title, body, author_id, created_at, score, tags, flagged')
         .eq('status', 'approved')
         .order('created_at', { ascending: false }),
     ])
@@ -92,7 +92,10 @@ export default function AdminCommunity() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {(tab === 'pending' ? pendingPosts : approvedPosts).map((post) => (
             <div key={post.id} className="card">
-              <p className="card__badge" style={{ marginBottom: 8 }}>{post.status}</p>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
+                <p className="card__badge" style={{ margin: 0 }}>{post.status}</p>
+                {post.flagged && <p className="card__badge" style={{ margin: 0, background: '#c0392b' }}>flagged</p>}
+              </div>
               <h3 style={{ margin: '0 0 6px' }}>{post.title}</h3>
               <p className="muted" style={{ fontSize: '0.85rem', margin: '0 0 4px' }}>
                 score: {post.score ?? 0} · {new Date(post.created_at).toLocaleDateString()}

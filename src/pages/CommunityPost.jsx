@@ -82,6 +82,11 @@ export default function CommunityPost() {
     if (!error) window.location.href = '/community'
   }
 
+  async function handleFlag() {
+    if (!confirm('Flag this post for admin review?')) return
+    await supabase.rpc('flag_post', { p_post_id: parseInt(id) })
+  }
+
   async function handleVote(voteType) {
     if (!user) return
     const { error: err } = await supabase.rpc('vote_post', {
@@ -180,14 +185,7 @@ export default function CommunityPost() {
               </button>
             </div>
             <div style={{ flex: 1 }}>
-              <div className="news-post__bar" style={{ marginBottom: 4 }}>
-                <p className="news-post__meta" style={{ margin: 0 }}>{timeAgo(post.created_at)}</p>
-                {user?.id === post.author_id && (
-                  <button type="button" className="back-link" style={{ color: '#c0392b' }} onClick={handleDelete}>
-                    Delete
-                  </button>
-                )}
-              </div>
+              <p className="news-post__meta" style={{ marginBottom: 4 }}>{timeAgo(post.created_at)}</p>
               <h1 className="news-post__title" style={{ marginBottom: 16 }}>{post.title}</h1>
               {post.tags && post.tags.length > 0 && (
                 <div style={{ display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -200,6 +198,16 @@ export default function CommunityPost() {
               )}
               <div className="wp-content">
                 <p>{post.body}</p>
+              </div>
+              <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
+                {user?.id === post.author_id && (
+                  <button type="button" onClick={handleDelete} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', color: '#c0392b', fontSize: '0.82rem', fontWeight: 400, textDecoration: 'underline', fontFamily: 'inherit' }}>
+                    delete post
+                  </button>
+                )}
+                <button type="button" onClick={handleFlag} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', color: 'var(--muted)', fontSize: '0.82rem', fontWeight: 400, textDecoration: 'underline', fontFamily: 'inherit' }}>
+                  report post
+                </button>
               </div>
             </div>
           </div>
