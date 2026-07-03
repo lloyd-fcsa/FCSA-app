@@ -66,6 +66,16 @@ export default function CommunityPost() {
 
   useEffect(() => {
     if (!supabase) return
+    const channel = supabase
+      .channel('post-live-' + id)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'community_comments', filter: `post_id=eq.${id}` }, (payload) => {
+        setComments(prev => [...prev, payload.new])
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'community_posts', filter: `id=eq.${id}` }, (payload) => {
+        setPost(prev => prev ? { ...prev, ...payload.new } : prev)
+      })
+      .subscribe()
+
     supabase
       .from('community_comments')
       .select('id, body, author_id, created_at')
@@ -74,6 +84,8 @@ export default function CommunityPost() {
       .then(({ data }) => {
         if (data) setComments(data)
       })
+
+    return () => { supabase.removeChannel(channel) }
   }, [id])
 
   async function handleDelete() {

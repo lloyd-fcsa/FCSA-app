@@ -49,8 +49,29 @@ export default function Community() {
   }
 
   useEffect(() => {
+    if (!supabase) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPosts(searchTag.trim())
+
+    const channel = supabase
+      .channel('community-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'community_posts', filter: 'status=eq.approved' }, (payload) => {
+        setPosts(prev => [payload.new, ...prev])
+        setMyVotes(prev => {
+          const next = { ...prev }
+          delete next[payload.new.id]
+          return next
+        })
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'community_posts' }, (payload) => {
+        setPosts(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'community_posts' }, (payload) => {
+        setPosts(prev => prev.filter(p => p.id !== payload.old.id))
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

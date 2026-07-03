@@ -9,13 +9,6 @@ export default function AdminCommunity() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('pending')
 
-  function fetchPendingAndFlagged() {
-    return Promise.all([
-      supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason, status').eq('status', 'pending').order('created_at', { ascending: false }),
-      supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason, status').eq('flagged', true).order('created_at', { ascending: false }),
-    ])
-  }
-
   useEffect(() => {
     if (!supabase) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -35,15 +28,33 @@ export default function AdminCommunity() {
       setLoading(false)
     })
 
-    const interval = setInterval(() => {
-      fetchPendingAndFlagged().then(([pendingRes, flaggedRes]) => {
+    const channel = supabase
+      .channel('admin-community-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'community_posts' }, (payload) => {
         if (!alive) return
-        if (pendingRes.data) setPendingPosts(pendingRes.data)
-        if (flaggedRes.data) setFlaggedPosts(flaggedRes.data)
+        const p = payload.new
+        if (p.status === 'pending') setPendingPosts(prev => [p, ...prev])
+        if (p.flagged) setFlaggedPosts(prev => [p, ...prev])
       })
-    }, 10000)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'community_posts' }, (payload) => {
+        if (!alive) return
+        const p = payload.new
+        setPendingPosts(prev => prev.map(x => x.id === p.id ? p : x))
+        setApprovedPosts(prev => prev.map(x => x.id === p.id ? p : x))
+        setFlaggedPosts(prev => prev.map(x => x.id === p.id ? p : x))
+        if (p.flagged && !payload.old.flagged) setFlaggedPosts(prev => [p, ...prev])
+        if (!p.flagged && payload.old.flagged) setFlaggedPosts(prev => prev.filter(x => x.id !== p.id))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'community_posts' }, (payload) => {
+        if (!alive) return
+        const id = payload.old.id
+        setPendingPosts(prev => prev.filter(x => x.id !== id))
+        setApprovedPosts(prev => prev.filter(x => x.id !== id))
+        setFlaggedPosts(prev => prev.filter(x => x.id !== id))
+      })
+      .subscribe()
 
-    return () => { alive = false; clearInterval(interval) }
+    return () => { alive = false; supabase.removeChannel(channel) }
   }, [])
 
   async function approve(id) {
