@@ -32,6 +32,7 @@ export default function CommunityPost() {
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [reported, setReported] = useState(false)
 
   const post = contextPost || fallbackPost
   const myVote = contextVote || fallbackVote
@@ -77,11 +78,11 @@ export default function CommunityPost() {
   async function handleComment(e) {
     e.preventDefault()
     if (!body.trim()) return
-    setSubmitting(true)
-    setError('')
-    const { error: err } = await supabase.from('community_comments').insert({ post_id: id, body: body.trim() })
-    if (err) { setError(err.message); setSubmitting(false) }
-    else { setBody(''); setSubmitting(false) }
+    const optimistic = { id: Date.now(), body: body.trim(), author_id: user?.id, created_at: new Date().toISOString() }
+    setComments(prev => [...prev, optimistic])
+    setBody('')
+    const { error: err } = await supabase.from('community_comments').insert({ post_id: id, body: optimistic.body })
+    if (err) { setComments(prev => prev.filter(c => c.id !== optimistic.id)); setError(err.message) }
   }
 
   async function handleDelete() {
@@ -93,6 +94,7 @@ export default function CommunityPost() {
   async function handleFlag() {
     const reason = prompt('Why are you flagging this post? (optional)')
     if (reason === null) return
+    setReported(true)
     await supabase.rpc('flag_post', { p_post_id: parseInt(id), p_reason: reason || '' })
   }
 
@@ -134,7 +136,11 @@ export default function CommunityPost() {
                 {user?.id === post.author_id && (
                   <button type="button" onClick={handleDelete} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', color: '#c0392b', fontSize: '0.82rem', fontWeight: 400, textDecoration: 'underline', fontFamily: 'inherit' }}>delete post</button>
                 )}
-                <button type="button" onClick={handleFlag} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', color: 'var(--muted)', fontSize: '0.82rem', fontWeight: 400, textDecoration: 'underline', fontFamily: 'inherit' }}>report post</button>
+                {reported ? (
+                  <span style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>reported</span>
+                ) : (
+                  <button type="button" onClick={handleFlag} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', color: 'var(--muted)', fontSize: '0.82rem', fontWeight: 400, textDecoration: 'underline', fontFamily: 'inherit' }}>report post</button>
+                )}
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0, minWidth: 40 }}>

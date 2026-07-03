@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import AdminShell from '../../components/AdminShell.jsx'
 
@@ -9,24 +9,27 @@ export default function AdminCommunity() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('pending')
 
-  useEffect(() => {
-    if (!supabase) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(false)
-      return
-    }
-    let alive = true
+  const fetchAll = useCallback(() => {
+    if (!supabase) { setLoading(false); return }
     Promise.all([
       supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason, status').eq('status', 'pending').order('created_at', { ascending: false }),
       supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason, status').eq('status', 'approved').order('created_at', { ascending: false }),
       supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason, status').eq('flagged', true).order('created_at', { ascending: false }),
     ]).then(([pendingRes, approvedRes, flaggedRes]) => {
-      if (!alive) return
       if (pendingRes.data) setPendingPosts(pendingRes.data)
       if (approvedRes.data) setApprovedPosts(approvedRes.data)
       if (flaggedRes.data) setFlaggedPosts(flaggedRes.data)
       setLoading(false)
     })
+  }, [])
+
+  useEffect(() => {
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+    let alive = true
+    fetchAll()
 
     const channel = supabase
       .channel('admin-community-live')
@@ -54,35 +57,39 @@ export default function AdminCommunity() {
       })
       .subscribe()
 
-    return () => { alive = false; supabase.removeChannel(channel) }
-  }, [])
+    function refetch() { if (alive) fetchAll() }
+    document.addEventListener('visibilitychange', refetch)
+    window.addEventListener('focus', refetch)
+
+    return () => { alive = false; supabase.removeChannel(channel); document.removeEventListener('visibilitychange', refetch); window.removeEventListener('focus', refetch) }
+  }, [fetchAll])
 
   async function approve(id) {
-    await supabase.from('community_posts').update({ status: 'approved' }).eq('id', id)
     const post = pendingPosts.find(p => p.id === id)
     if (post) {
       setPendingPosts(prev => prev.filter(p => p.id !== id))
       setApprovedPosts(prev => [...prev, { ...post, status: 'approved' }])
     }
+    await supabase.from('community_posts').update({ status: 'approved' }).eq('id', id)
   }
 
   async function reject(id) {
-    await supabase.from('community_posts').update({ status: 'rejected' }).eq('id', id)
     setPendingPosts(prev => prev.filter(p => p.id !== id))
+    await supabase.from('community_posts').update({ status: 'rejected' }).eq('id', id)
   }
 
   async function ignoreFlag(id) {
-    await supabase.from('community_posts').update({ flagged: false, flagged_reason: null }).eq('id', id)
     setFlaggedPosts(prev => prev.filter(p => p.id !== id))
     setPendingPosts(prev => prev.map(p => p.id === id ? { ...p, flagged: false, flagged_reason: null } : p))
     setApprovedPosts(prev => prev.map(p => p.id === id ? { ...p, flagged: false, flagged_reason: null } : p))
+    await supabase.from('community_posts').update({ flagged: false, flagged_reason: null }).eq('id', id)
   }
 
   async function hidePost(id) {
-    await supabase.from('community_posts').update({ flagged: false, flagged_reason: null, status: 'rejected' }).eq('id', id)
     setFlaggedPosts(prev => prev.filter(p => p.id !== id))
     setPendingPosts(prev => prev.filter(p => p.id !== id))
     setApprovedPosts(prev => prev.filter(p => p.id !== id))
+    await supabase.from('community_posts').update({ flagged: false, flagged_reason: null, status: 'rejected' }).eq('id', id)
   }
 
   function posts() {

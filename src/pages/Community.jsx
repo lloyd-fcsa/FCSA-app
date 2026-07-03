@@ -108,7 +108,7 @@ export default function Community() {
           {searchTag && <button type="button" className="button button--ghost" onClick={() => setSearchTag('')}>Clear</button>}
         </form>
 
-        {loading ? (
+        {loading && posts.length === 0 ? (
           <p className="muted">Loading posts…</p>
         ) : posts.length === 0 ? (
           <div className="empty">
