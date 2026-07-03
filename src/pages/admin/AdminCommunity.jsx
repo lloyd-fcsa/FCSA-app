@@ -9,6 +9,13 @@ export default function AdminCommunity() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('pending')
 
+  function fetchPendingAndFlagged() {
+    return Promise.all([
+      supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason, status').eq('status', 'pending').order('created_at', { ascending: false }),
+      supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason, status').eq('flagged', true).order('created_at', { ascending: false }),
+    ])
+  }
+
   useEffect(() => {
     if (!supabase) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -27,7 +34,16 @@ export default function AdminCommunity() {
       if (flaggedRes.data) setFlaggedPosts(flaggedRes.data)
       setLoading(false)
     })
-    return () => { alive = false }
+
+    const interval = setInterval(() => {
+      fetchPendingAndFlagged().then(([pendingRes, flaggedRes]) => {
+        if (!alive) return
+        if (pendingRes.data) setPendingPosts(pendingRes.data)
+        if (flaggedRes.data) setFlaggedPosts(flaggedRes.data)
+      })
+    }, 10000)
+
+    return () => { alive = false; clearInterval(interval) }
   }, [])
 
   async function approve(id) {
