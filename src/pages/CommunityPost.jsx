@@ -105,8 +105,6 @@ export default function CommunityPost() {
   async function handleVote(voteType) {
     if (!user) return
     const existing = myVote
-    const { error: err } = await supabase.rpc('vote_post', { p_post_id: parseInt(id), p_vote_type: voteType })
-    if (err) return
     let delta
     if (!existing) delta = voteType === 'up' ? 1 : -1
     else if (existing === voteType) delta = voteType === 'up' ? -1 : 1
@@ -114,7 +112,7 @@ export default function CommunityPost() {
     setPost(prev => prev ? { ...prev, score: (prev.score || 0) + delta } : prev)
     if (!existing || existing !== voteType) setMyVote(voteType)
     else setMyVote(null)
-    vote(numId, voteType)
+    await vote(numId, voteType)
   }
 
   if (loading) {

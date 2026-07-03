@@ -89,9 +89,6 @@ export function CommunityProvider({ children }) {
   const vote = useCallback(async (postId, voteType) => {
     if (!user) return
     const existing = myVotes[postId]
-    const { error } = await supabase.rpc('vote_post', { p_post_id: postId, p_vote_type: voteType })
-    if (error) return
-
     let delta
     if (!existing) delta = voteType === 'up' ? 1 : -1
     else if (existing === voteType) delta = voteType === 'up' ? -1 : 1
@@ -104,6 +101,8 @@ export function CommunityProvider({ children }) {
       delete next[postId]
       return next
     })
+
+    await supabase.rpc('vote_post', { p_post_id: postId, p_vote_type: voteType })
   }, [user, myVotes])
 
   return (
