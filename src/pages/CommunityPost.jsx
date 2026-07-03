@@ -17,9 +17,10 @@ function timeAgo(date) {
 
 export default function CommunityPost() {
   const { id } = useParams()
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   const [post, setPost] = useState(null)
   const [comments, setComments] = useState([])
+  const [myVote, setMyVote] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [body, setBody] = useState('')
@@ -35,12 +36,12 @@ export default function CommunityPost() {
     let alive = true
     supabase
       .from('community_posts')
-      .select('id, title, body, author_id, created_at, status')
+      .select('id, title, body, author_id, created_at, status, score, tags')
       .eq('id', id)
       .maybeSingle()
       .then(({ data }) => {
         if (!alive) return
-        if (!data || (data.status !== 'approved' && data.author_id !== user?.id && profile?.role !== 'admin')) {
+        if (!data || (data.status !== 'approved' && data.author_id !== user?.id)) {
           setNotFound(true)
         } else {
           setPost(data)
@@ -48,7 +49,20 @@ export default function CommunityPost() {
         setLoading(false)
       })
     return () => { alive = false }
-  }, [id, user, profile])
+  }, [id, user])
+
+  useEffect(() => {
+    if (!supabase || !user) return
+    supabase
+      .from('community_votes')
+      .select('vote_type')
+      .eq('post_id', id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setMyVote(data.vote_type)
+      })
+  }, [id, user])
 
   useEffect(() => {
     if (!supabase) return
@@ -61,6 +75,26 @@ export default function CommunityPost() {
         if (data) setComments(data)
       })
   }, [id])
+
+  async function handleVote(voteType) {
+    if (!user) return
+    const { error: err } = await supabase.rpc('vote_post', {
+      p_post_id: parseInt(id),
+      p_vote_type: voteType,
+    })
+    if (err) return
+    const existing = myVote
+    let delta
+    if (!existing) delta = voteType === 'up' ? 1 : -1
+    else if (existing === voteType) delta = voteType === 'up' ? -1 : 1
+    else delta = voteType === 'up' ? 2 : -2
+    setPost(prev => prev ? { ...prev, score: (prev.score || 0) + delta } : prev)
+    if (!existing || existing !== voteType) {
+      setMyVote(voteType)
+    } else {
+      setMyVote(null)
+    }
+  }
 
   async function handleComment(e) {
     e.preventDefault()
@@ -117,12 +151,44 @@ export default function CommunityPost() {
         </p>
 
         <article className="news-post" style={{ marginTop: 10 }}>
-          <p className="news-post__meta">
-            {timeAgo(post.created_at)}
-          </p>
-          <h1 className="news-post__title" style={{ marginBottom: 16 }}>{post.title}</h1>
-          <div className="wp-content">
-            <p>{post.body}</p>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0, minWidth: 40 }}>
+              <button
+                type="button"
+                onClick={() => handleVote('up')}
+                disabled={!user}
+                style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'up' ? 'var(--accent)' : '#ccc', lineHeight: 0 }}
+                aria-label="Upvote"
+              >
+                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 4 4 16h16z"/></svg>
+              </button>
+              <span style={{ fontWeight: 900, fontSize: '1.1rem', lineHeight: 1.2 }}>{post.score ?? 0}</span>
+              <button
+                type="button"
+                onClick={() => handleVote('down')}
+                disabled={!user}
+                style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'down' ? 'var(--accent)' : '#ccc', lineHeight: 0 }}
+                aria-label="Downvote"
+              >
+                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 20 4 8h16z"/></svg>
+              </button>
+            </div>
+            <div style={{ flex: 1 }}>
+              <p className="news-post__meta">{timeAgo(post.created_at)}</p>
+              <h1 className="news-post__title" style={{ marginBottom: 16 }}>{post.title}</h1>
+              {post.tags && post.tags.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap' }}>
+                  {post.tags.map(t => (
+                    <span key={t} style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: 999 }}>
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="wp-content">
+                <p>{post.body}</p>
+              </div>
+            </div>
           </div>
         </article>
 

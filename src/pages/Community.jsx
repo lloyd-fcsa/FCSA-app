@@ -18,47 +18,106 @@ function timeAgo(date) {
 export default function Community() {
   const { user, loading: authLoading } = useAuth()
   const [posts, setPosts] = useState([])
+  const [myVotes, setMyVotes] = useState({})
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [tagsInput, setTagsInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [searchTag, setSearchTag] = useState('')
+
+  function loadPosts(tag) {
+    if (!supabase) { setLoading(false); return }
+    setLoading(true)
+    let query = supabase
+      .from('community_posts')
+      .select('id, title, body, author_id, created_at, score, tags')
+      .eq('status', 'approved')
+      .order('score', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    if (tag) {
+      query = query.contains('tags', [tag])
+    }
+
+    query.then(({ data }) => {
+      if (data) setPosts(data)
+      setLoading(false)
+    })
+  }
 
   useEffect(() => {
-    if (!supabase) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(false)
-      return
-    }
-    let alive = true
-    supabase
-      .from('community_posts')
-      .select('id, title, body, author_id, created_at')
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (!alive) return
-        if (data) setPosts(data)
-        setLoading(false)
-      })
-    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadPosts(searchTag.trim())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!user || posts.length === 0) return
+    const ids = posts.map(p => p.id)
+    supabase
+      .from('community_votes')
+      .select('post_id, vote_type')
+      .in('post_id', ids)
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        if (!data) return
+        const map = {}
+        data.forEach(v => { map[v.post_id] = v.vote_type })
+        setMyVotes(map)
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, posts.length])
+
+  function handleSearch(e) {
+    e.preventDefault()
+    loadPosts(searchTag.trim())
+  }
+
+  async function handleVote(postId, voteType) {
+    if (!user) return
+    const existing = myVotes[postId]
+    const { error: err } = await supabase.rpc('vote_post', {
+      p_post_id: postId,
+      p_vote_type: voteType,
+    })
+    if (err) return
+
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p
+      let delta
+      if (!existing) delta = voteType === 'up' ? 1 : -1
+      else if (existing === voteType) delta = voteType === 'up' ? -1 : 1
+      else delta = voteType === 'up' ? 2 : -2
+      return { ...p, score: (p.score || 0) + delta }
+    }))
+
+    setMyVotes(prev => {
+      if (!existing || existing !== voteType) return { ...prev, [postId]: voteType }
+      const next = { ...prev }
+      delete next[postId]
+      return next
+    })
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!title.trim() || !body.trim()) return
     setSubmitting(true)
     setError('')
+    const tags = tagsInput.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
     const { error: err } = await supabase
       .from('community_posts')
-      .insert({ title: title.trim(), body: body.trim() })
+      .insert({ title: title.trim(), body: body.trim(), tags })
     if (err) {
       setError(err.message)
       setSubmitting(false)
     } else {
       setTitle('')
       setBody('')
+      setTagsInput('')
       setShowForm(false)
       setSubmitting(false)
     }
@@ -86,7 +145,7 @@ export default function Community() {
 
         {!user && !authLoading && (
           <p className="muted" style={{ marginBottom: 20 }}>
-            <Link to="/auth" state={{ from: '/community' }}>Sign in</Link> to post or comment.
+            <Link to="/auth" state={{ from: '/community' }}>Sign in</Link> to post or vote.
           </p>
         )}
 
@@ -114,6 +173,15 @@ export default function Community() {
                 style={{ padding: '12px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontSize: '1rem', fontFamily: 'inherit', background: '#fafafa', resize: 'vertical' }}
               />
             </div>
+            <div className="auth-field">
+              <label htmlFor="post-tags">Tags (comma-separated)</label>
+              <input
+                id="post-tags"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                placeholder="e.g. tax, compliance, apprenticeships"
+              />
+            </div>
             {error && <p className="auth-error">{error}</p>}
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="submit" className="button" disabled={submitting}>
@@ -126,6 +194,21 @@ export default function Community() {
           </form>
         )}
 
+        <form onSubmit={handleSearch} style={{ marginBottom: 20, display: 'flex', gap: 8 }}>
+          <input
+            value={searchTag}
+            onChange={(e) => setSearchTag(e.target.value)}
+            placeholder="Filter by tag…"
+            style={{ flex: 1, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontSize: '0.9rem', fontFamily: 'inherit', background: '#fafafa' }}
+          />
+          <button type="submit" className="button">Search</button>
+          {searchTag && (
+            <button type="button" className="button button--ghost" onClick={() => { setSearchTag(''); loadPosts('') }}>
+              Clear
+            </button>
+          )}
+        </form>
+
         {loading ? (
           <p className="muted">Loading posts…</p>
         ) : posts.length === 0 ? (
@@ -137,18 +220,55 @@ export default function Community() {
             <span className="muted">Be the first to ask something.</span>
           </div>
         ) : (
-          <div className="news-list">
-            {posts.map((post) => (
-              <Link key={post.id} to={`/community/${post.id}`} className="news-card" style={{ textDecoration: 'none', color: 'var(--text)' }}>
-                <div className="news-card__body">
-                  <p className="news-card__title" style={{ margin: 0 }}>{post.title}</p>
-                  <p className="news-card__excerpt" style={{ margin: '6px 0 0' }}>{post.body}</p>
-                  <p className="news-card__date" style={{ margin: '10px 0 0' }}>
-                    {timeAgo(post.created_at)}
-                  </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {posts.map((post) => {
+              const myVote = myVotes[post.id]
+              return (
+                <div key={post.id} className="card" style={{ padding: 14 }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0, minWidth: 40 }}>
+                      <button
+                        type="button"
+                        onClick={() => handleVote(post.id, 'up')}
+                        disabled={!user}
+                        style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'up' ? 'var(--accent)' : '#ccc', lineHeight: 0 }}
+                        aria-label="Upvote"
+                      >
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 4 4 16h16z"/></svg>
+                      </button>
+                      <span style={{ fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.2 }}>{post.score ?? 0}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleVote(post.id, 'down')}
+                        disabled={!user}
+                        style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'down' ? 'var(--accent)' : '#ccc', lineHeight: 0 }}
+                        aria-label="Downvote"
+                      >
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 20 4 8h16z"/></svg>
+                      </button>
+                    </div>
+                    <Link to={`/community/${post.id}`} style={{ flex: 1, textDecoration: 'none', color: 'var(--text)' }}>
+                      <h3 style={{ margin: '0 0 4px', fontSize: '1rem' }}>{post.title}</h3>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
+                        {post.body}
+                      </p>
+                      {post.tags && post.tags.length > 0 && (
+                        <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
+                          {post.tags.map(t => (
+                            <span key={t} style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: 999 }}>
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <p className="news-card__date" style={{ margin: '8px 0 0' }}>
+                        {timeAgo(post.created_at)}
+                      </p>
+                    </Link>
+                  </div>
                 </div>
-              </Link>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

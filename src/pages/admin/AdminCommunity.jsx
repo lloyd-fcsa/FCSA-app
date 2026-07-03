@@ -19,12 +19,12 @@ export default function AdminCommunity() {
     Promise.all([
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at')
+        .select('id, title, body, author_id, created_at, score, tags')
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at')
+        .select('id, title, body, author_id, created_at, score, tags')
         .eq('status', 'approved')
         .order('created_at', { ascending: false }),
     ]).then(([pendingRes, approvedRes]) => {
@@ -41,12 +41,12 @@ export default function AdminCommunity() {
     const [pendingRes, approvedRes] = await Promise.all([
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at')
+        .select('id, title, body, author_id, created_at, score, tags')
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at')
+        .select('id, title, body, author_id, created_at, score, tags')
         .eq('status', 'approved')
         .order('created_at', { ascending: false }),
     ])
@@ -95,8 +95,17 @@ export default function AdminCommunity() {
               <p className="card__badge" style={{ marginBottom: 8 }}>{post.status}</p>
               <h3 style={{ margin: '0 0 6px' }}>{post.title}</h3>
               <p className="muted" style={{ fontSize: '0.85rem', margin: '0 0 4px' }}>
-                {new Date(post.created_at).toLocaleDateString()}
+                score: {post.score ?? 0} · {new Date(post.created_at).toLocaleDateString()}
               </p>
+              {post.tags && post.tags.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+                  {post.tags.map(t => (
+                    <span key={t} style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: 999 }}>
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
               <p style={{ fontSize: '0.92rem', margin: '0 0 12px' }}>{post.body}</p>
               {tab === 'pending' && (
                 <div style={{ display: 'flex', gap: 8 }}>
