@@ -5,54 +5,64 @@ import AdminShell from '../../components/AdminShell.jsx'
 export default function AdminCommunity() {
   const [pendingPosts, setPendingPosts] = useState([])
   const [approvedPosts, setApprovedPosts] = useState([])
+  const [flaggedPosts, setFlaggedPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('pending')
 
-  useEffect(() => {
-    if (!supabase) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(false)
-      return
-    }
-    let alive = true
+  function loadAll() {
+    if (!supabase) { setLoading(false); return }
     setLoading(true)
     Promise.all([
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason')
+        .select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason, status')
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason')
+        .select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason, status')
         .eq('status', 'approved')
         .order('created_at', { ascending: false }),
-    ]).then(([pendingRes, approvedRes]) => {
-      if (!alive) return
+      supabase
+        .from('community_posts')
+        .select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason, status')
+        .eq('flagged', true)
+        .order('created_at', { ascending: false }),
+    ]).then(([pendingRes, approvedRes, flaggedRes]) => {
       if (pendingRes.data) setPendingPosts(pendingRes.data)
       if (approvedRes.data) setApprovedPosts(approvedRes.data)
+      if (flaggedRes.data) setFlaggedPosts(flaggedRes.data)
       setLoading(false)
     })
-    return () => { alive = false }
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadAll()
   }, [])
 
   async function updateStatus(id, status) {
     await supabase.from('community_posts').update({ status }).eq('id', id)
-    const [pendingRes, approvedRes] = await Promise.all([
-      supabase
-        .from('community_posts')
-        .select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('community_posts')
-        .select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason')
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false }),
-    ])
-    if (pendingRes.data) setPendingPosts(pendingRes.data)
-    if (approvedRes.data) setApprovedPosts(approvedRes.data)
+    loadAll()
   }
+
+  async function ignoreFlag(id) {
+    await supabase.from('community_posts').update({ flagged: false, flagged_reason: null }).eq('id', id)
+    loadAll()
+  }
+
+  async function hidePost(id) {
+    await supabase.from('community_posts').update({ flagged: false, flagged_reason: null, status: 'rejected' }).eq('id', id)
+    loadAll()
+  }
+
+  function currentPosts() {
+    if (tab === 'pending') return pendingPosts
+    if (tab === 'approved') return approvedPosts
+    return flaggedPosts
+  }
+
+  const posts = currentPosts()
 
   return (
     <AdminShell title="Community moderation">
@@ -75,22 +85,26 @@ export default function AdminCommunity() {
         >
           Approved ({approvedPosts.length})
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'flagged'}
+          className={'day-toggle__btn' + (tab === 'flagged' ? ' is-active' : '')}
+          onClick={() => setTab('flagged')}
+        >
+          Flagged ({flaggedPosts.length})
+        </button>
       </div>
 
       {loading ? (
         <p className="muted">Loading…</p>
-      ) : tab === 'pending' && pendingPosts.length === 0 ? (
+      ) : posts.length === 0 ? (
         <div className="empty">
-          <p>No pending posts.</p>
-          <span className="muted">All caught up.</span>
-        </div>
-      ) : tab === 'approved' && approvedPosts.length === 0 ? (
-        <div className="empty">
-          <p>No approved posts yet.</p>
+          <p>No {tab} posts.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {(tab === 'pending' ? pendingPosts : approvedPosts).map((post) => (
+          {posts.map((post) => (
             <div key={post.id} className="card">
               <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
                 <p className="card__badge" style={{ margin: 0 }}>{post.status}</p>
@@ -115,6 +129,7 @@ export default function AdminCommunity() {
                 </div>
               )}
               <p style={{ fontSize: '0.92rem', margin: '0 0 12px' }}>{post.body}</p>
+
               {tab === 'pending' && (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button type="button" className="button" onClick={() => updateStatus(post.id, 'approved')}>
@@ -122,6 +137,17 @@ export default function AdminCommunity() {
                   </button>
                   <button type="button" className="button button--ghost" style={{ borderColor: '#c0392b', color: '#c0392b' }} onClick={() => updateStatus(post.id, 'rejected')}>
                     Reject
+                  </button>
+                </div>
+              )}
+
+              {tab === 'flagged' && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" className="button button--ghost" onClick={() => ignoreFlag(post.id)}>
+                    Ignore
+                  </button>
+                  <button type="button" className="button button--ghost" style={{ borderColor: '#c0392b', color: '#c0392b' }} onClick={() => hidePost(post.id)}>
+                    Hide Post
                   </button>
                 </div>
               )}
