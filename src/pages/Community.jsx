@@ -273,7 +273,7 @@ export default function Community() {
                         <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 20 4 8h16z"/></svg>
                       </button>
                     </div>
-                    <Link to={`/community/${post.id}`} style={{ flex: 1, textDecoration: 'none', color: 'var(--text)' }}>
+                    <Link to={`/community/${post.id}`} state={{ post, myVote }} style={{ flex: 1, textDecoration: 'none', color: 'var(--text)' }}>
                       <h3 style={{ margin: '0 0 4px', fontSize: '1rem' }}>{post.title}</h3>
                       <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
                         {post.body}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useLocation, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../lib/auth.jsx'
 
@@ -18,10 +18,13 @@ function timeAgo(date) {
 export default function CommunityPost() {
   const { id } = useParams()
   const { user } = useAuth()
-  const [post, setPost] = useState(null)
+  const loc = useLocation()
+  const initialState = loc.state?.post
+  const initialVote = loc.state?.myVote
+  const [post, setPost] = useState(initialState || null)
   const [comments, setComments] = useState([])
-  const [myVote, setMyVote] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [myVote, setMyVote] = useState(initialVote || null)
+  const [loading, setLoading] = useState(!initialState)
   const [notFound, setNotFound] = useState(false)
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
