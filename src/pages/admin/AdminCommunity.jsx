@@ -19,12 +19,12 @@ export default function AdminCommunity() {
     Promise.all([
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, score, tags, flagged')
+        .select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason')
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, score, tags, flagged')
+        .select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason')
         .eq('status', 'approved')
         .order('created_at', { ascending: false }),
     ]).then(([pendingRes, approvedRes]) => {
@@ -41,12 +41,12 @@ export default function AdminCommunity() {
     const [pendingRes, approvedRes] = await Promise.all([
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, score, tags, flagged')
+        .select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason')
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, score, tags, flagged')
+        .select('id, title, body, author_id, created_at, score, tags, flagged, flagged_reason')
         .eq('status', 'approved')
         .order('created_at', { ascending: false }),
     ])
@@ -96,6 +96,11 @@ export default function AdminCommunity() {
                 <p className="card__badge" style={{ margin: 0 }}>{post.status}</p>
                 {post.flagged && <p className="card__badge" style={{ margin: 0, background: '#c0392b' }}>flagged</p>}
               </div>
+              {post.flagged && post.flagged_reason && (
+                <p className="muted" style={{ fontSize: '0.85rem', margin: '-4px 0 8px', fontStyle: 'italic' }}>
+                  reason: {post.flagged_reason}
+                </p>
+              )}
               <h3 style={{ margin: '0 0 6px' }}>{post.title}</h3>
               <p className="muted" style={{ fontSize: '0.85rem', margin: '0 0 4px' }}>
                 score: {post.score ?? 0} · {new Date(post.created_at).toLocaleDateString()}

@@ -83,8 +83,9 @@ export default function CommunityPost() {
   }
 
   async function handleFlag() {
-    if (!confirm('Flag this post for admin review?')) return
-    await supabase.rpc('flag_post', { p_post_id: parseInt(id) })
+    const reason = prompt('Why are you flagging this post? (optional)')
+    if (reason === null) return
+    await supabase.rpc('flag_post', { p_post_id: parseInt(id), p_reason: reason || '' })
   }
 
   async function handleVote(voteType) {
