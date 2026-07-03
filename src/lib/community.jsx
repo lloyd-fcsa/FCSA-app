@@ -57,13 +57,17 @@ export function CommunityProvider({ children }) {
       })
       .subscribe()
 
-    const poll = setInterval(() => {
+    function refetch() {
       let q = supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags').eq('status', 'approved').order('score', { ascending: false }).order('created_at', { ascending: false })
       if (searchTag) q = q.contains('tags', [searchTag])
       q.then(({ data }) => { if (data) setPosts(data) })
-    }, 5000)
+    }
 
-    return () => { supabase.removeChannel(channel); clearInterval(poll) }
+    const handleFocus = () => refetch()
+    document.addEventListener('visibilitychange', handleFocus)
+    window.addEventListener('focus', handleFocus)
+
+    return () => { supabase.removeChannel(channel); document.removeEventListener('visibilitychange', handleFocus); window.removeEventListener('focus', handleFocus) }
   }, [searchTag, loadPosts])
 
   useEffect(() => {
