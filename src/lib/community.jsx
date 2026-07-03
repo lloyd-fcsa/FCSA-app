@@ -23,7 +23,7 @@ export function CommunityProvider({ children }) {
   function fetchPosts(tag) {
     if (!supabase) { setLoading(false); return }
     setLoading(true)
-    let q = supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags').eq('status', 'approved').order('score', { ascending: false }).order('created_at', { ascending: false })
+    let q = supabase.from('community_posts').select('id, title, body, author_id, created_at, score, upvotes, downvotes, tags').eq('status', 'approved').order('upvotes', { ascending: false }).order('created_at', { ascending: false })
     if (tag) q = q.contains('tags', [tag])
     q.then(({ data }) => {
       if (data) setPosts(data)
@@ -56,7 +56,7 @@ export function CommunityProvider({ children }) {
 
     function refetch() {
       if (!supabase) return
-      let q = supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags').eq('status', 'approved').order('score', { ascending: false }).order('created_at', { ascending: false })
+      let q = supabase.from('community_posts').select('id, title, body, author_id, created_at, score, upvotes, downvotes, tags').eq('status', 'approved').order('upvotes', { ascending: false }).order('created_at', { ascending: false })
       if (searchTag) q = q.contains('tags', [searchTag])
       q.then(({ data }) => { if (data) setPosts(data) })
     }
@@ -89,12 +89,27 @@ export function CommunityProvider({ children }) {
   const vote = useCallback(async (postId, voteType) => {
     if (!user) return
     const existing = myVotes[postId]
-    let delta
-    if (!existing) delta = voteType === 'up' ? 1 : -1
-    else if (existing === voteType) delta = voteType === 'up' ? -1 : 1
-    else delta = voteType === 'up' ? 2 : -2
+    let scoreDelta, upDelta, downDelta
+    if (!existing) {
+      scoreDelta = voteType === 'up' ? 1 : -1
+      upDelta = voteType === 'up' ? 1 : 0
+      downDelta = voteType === 'up' ? 0 : 1
+    } else if (existing === voteType) {
+      scoreDelta = voteType === 'up' ? -1 : 1
+      upDelta = voteType === 'up' ? -1 : 0
+      downDelta = voteType === 'up' ? 0 : -1
+    } else {
+      scoreDelta = voteType === 'up' ? 2 : -2
+      upDelta = voteType === 'up' ? 1 : -1
+      downDelta = voteType === 'up' ? -1 : 1
+    }
 
-    setPosts(prev => prev.map(p => p.id === postId ? { ...p, score: (p.score || 0) + delta } : p))
+    setPosts(prev => prev.map(p => p.id === postId ? {
+      ...p,
+      score: (p.score || 0) + scoreDelta,
+      upvotes: Math.max(0, (p.upvotes || 0) + upDelta),
+      downvotes: Math.max(0, (p.downvotes || 0) + downDelta),
+    } : p))
     setMyVotes(prev => {
       if (!existing || existing !== voteType) return { ...prev, [postId]: voteType }
       const next = { ...prev }

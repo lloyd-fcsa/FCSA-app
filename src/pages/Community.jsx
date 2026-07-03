@@ -137,14 +137,19 @@ export default function Community() {
                       )}
                       <p className="news-card__date" style={{ margin: '8px 0 0' }}>{timeAgo(post.created_at)}</p>
                     </Link>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0, minWidth: 40 }}>
-                      <button type="button" onClick={() => vote(post.id, 'up')} disabled={!user} style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'up' ? 'var(--accent)' : '#ccc', lineHeight: 0 }} aria-label="Upvote">
-                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 4 4 16h16z"/></svg>
-                      </button>
-                      <span style={{ fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.2 }}>{post.score ?? 0}</span>
-                      <button type="button" onClick={() => vote(post.id, 'down')} disabled={!user} style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'down' ? 'var(--accent)' : '#ccc', lineHeight: 0 }} aria-label="Downvote">
-                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 20 4 8h16z"/></svg>
-                      </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, minWidth: 40, alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <button type="button" onClick={() => vote(post.id, 'up')} disabled={!user} style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'up' ? 'var(--accent)' : '#ccc', lineHeight: 0 }} aria-label="Upvote">
+                          <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>
+                        </button>
+                        <span style={{ fontWeight: 900, fontSize: '0.85rem', lineHeight: 1, minWidth: 20, textAlign: 'center' }}>{post.upvotes ?? 0}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <button type="button" onClick={() => vote(post.id, 'down')} disabled={!user} style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'down' ? 'var(--accent)' : '#ccc', lineHeight: 0 }} aria-label="Downvote">
+                          <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M23 3H9.5a2 2 0 0 0-1.84 1.22L4.64 11.27c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L13.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5a2 2 0 0 0-2-2zm-22 0H1v12h2V3z"/></svg>
+                        </button>
+                        <span style={{ fontWeight: 900, fontSize: '0.85rem', lineHeight: 1, minWidth: 20, textAlign: 'center' }}>{post.downvotes ?? 0}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
