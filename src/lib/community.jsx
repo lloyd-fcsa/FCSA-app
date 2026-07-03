@@ -37,6 +37,33 @@ export function CommunityProvider({ children }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPosts(searchTag)
+
+    if (!supabase) return
+    const channel = supabase
+      .channel('community-context')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'community_posts', filter: 'status=eq.approved' }, (payload) => {
+        setPosts(prev => prev.some(p => p.id === payload.new.id) ? prev : [payload.new, ...prev])
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'community_posts' }, (payload) => {
+        const p = payload.new
+        setPosts(prev =>
+          prev.some(x => x.id === p.id)
+            ? prev.map(x => x.id === p.id ? { ...x, ...p } : x)
+            : p.status === 'approved' ? [p, ...prev] : prev
+        )
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'community_posts' }, (payload) => {
+        setPosts(prev => prev.filter(p => p.id !== payload.old.id))
+      })
+      .subscribe()
+
+    const poll = setInterval(() => {
+      let q = supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags').eq('status', 'approved').order('score', { ascending: false }).order('created_at', { ascending: false })
+      if (searchTag) q = q.contains('tags', [searchTag])
+      q.then(({ data }) => { if (data) setPosts(data) })
+    }, 5000)
+
+    return () => { supabase.removeChannel(channel); clearInterval(poll) }
   }, [searchTag, loadPosts])
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../lib/auth.jsx'
@@ -18,8 +18,10 @@ function timeAgo(date) {
 
 export default function Community() {
   const { user, loading: authLoading } = useAuth()
-  const { posts, myVotes, loading, vote, searchTag, setSearchTag } = useCommunity()
+  const { posts, myVotes, loading, vote, refresh, searchTag, setSearchTag } = useCommunity()
   const [showForm, setShowForm] = useState(false)
+
+  useEffect(() => { refresh() }, [refresh])
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [tagsInput, setTagsInput] = useState('')
