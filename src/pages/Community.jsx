@@ -64,7 +64,12 @@ export default function Community() {
         })
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'community_posts' }, (payload) => {
-        setPosts(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p))
+        const p = payload.new
+        setPosts(prev =>
+          prev.some(x => x.id === p.id)
+            ? prev.map(x => x.id === p.id ? { ...x, ...p } : x)
+            : p.status === 'approved' ? [p, ...prev] : prev
+        )
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'community_posts' }, (payload) => {
         setPosts(prev => prev.filter(p => p.id !== payload.old.id))
