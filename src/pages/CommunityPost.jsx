@@ -35,7 +35,7 @@ export default function CommunityPost() {
     let alive = true
     supabase
       .from('community_posts')
-      .select('id, title, body, author_id, created_at, status, profiles!inner(display_name)')
+      .select('id, title, body, author_id, created_at, status')
       .eq('id', id)
       .maybeSingle()
       .then(({ data }) => {
@@ -54,7 +54,7 @@ export default function CommunityPost() {
     if (!supabase) return
     supabase
       .from('community_comments')
-      .select('id, body, author_id, created_at, profiles!inner(display_name)')
+      .select('id, body, author_id, created_at')
       .eq('post_id', id)
       .order('created_at', { ascending: true })
       .then(({ data }) => {
@@ -78,7 +78,7 @@ export default function CommunityPost() {
       setSubmitting(false)
       supabase
         .from('community_comments')
-        .select('id, body, author_id, created_at, profiles!inner(display_name)')
+        .select('id, body, author_id, created_at')
         .eq('post_id', id)
         .order('created_at', { ascending: true })
         .then(({ data }) => {
@@ -118,7 +118,7 @@ export default function CommunityPost() {
 
         <article className="news-post" style={{ marginTop: 10 }}>
           <p className="news-post__meta">
-            {post.profiles?.display_name || 'Anonymous'} · {timeAgo(post.created_at)}
+            {timeAgo(post.created_at)}
           </p>
           <h1 className="news-post__title" style={{ marginBottom: 16 }}>{post.title}</h1>
           <div className="wp-content">
@@ -139,8 +139,7 @@ export default function CommunityPost() {
             {comments.map((c) => (
               <div key={c.id} className="card">
                 <p style={{ margin: '0 0 4px', fontWeight: 900, fontSize: '0.85rem' }}>
-                  {c.profiles?.display_name || 'Anonymous'}
-                  <span className="muted" style={{ fontWeight: 400, fontSize: '0.78rem', marginLeft: 8 }}>{timeAgo(c.created_at)}</span>
+                  <span className="muted" style={{ fontWeight: 400, fontSize: '0.78rem' }}>{timeAgo(c.created_at)}</span>
                 </p>
                 <p style={{ margin: 0, fontSize: '0.92rem' }}>{c.body}</p>
               </div>

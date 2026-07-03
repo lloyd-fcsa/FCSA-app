@@ -34,7 +34,7 @@ export default function Community() {
     let alive = true
     supabase
       .from('community_posts')
-      .select('id, title, body, author_id, created_at, profiles!inner(display_name)')
+      .select('id, title, body, author_id, created_at')
       .eq('status', 'approved')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
@@ -144,7 +144,7 @@ export default function Community() {
                   <p className="news-card__title" style={{ margin: 0 }}>{post.title}</p>
                   <p className="news-card__excerpt" style={{ margin: '6px 0 0' }}>{post.body}</p>
                   <p className="news-card__date" style={{ margin: '10px 0 0' }}>
-                    {post.profiles?.display_name || 'Anonymous'} · {timeAgo(post.created_at)}
+                    {timeAgo(post.created_at)}
                   </p>
                 </div>
               </Link>
