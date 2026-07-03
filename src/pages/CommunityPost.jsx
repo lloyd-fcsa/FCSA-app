@@ -119,15 +119,6 @@ export default function CommunityPost() {
 
         <article className="news-post" style={{ marginTop: 10 }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0, minWidth: 40 }}>
-              <button type="button" onClick={() => vote(parseInt(id), 'up')} disabled={!user} style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'up' ? 'var(--accent)' : '#ccc', lineHeight: 0 }} aria-label="Upvote">
-                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 4 4 16h16z"/></svg>
-              </button>
-              <span style={{ fontWeight: 900, fontSize: '1.1rem', lineHeight: 1.2 }}>{post.score ?? 0}</span>
-              <button type="button" onClick={() => vote(parseInt(id), 'down')} disabled={!user} style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'down' ? 'var(--accent)' : '#ccc', lineHeight: 0 }} aria-label="Downvote">
-                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 20 4 8h16z"/></svg>
-              </button>
-            </div>
             <div style={{ flex: 1 }}>
               <p className="news-post__meta" style={{ marginBottom: 4 }}>{timeAgo(post.created_at)}</p>
               <h1 className="news-post__title" style={{ marginBottom: 16 }}>{post.title}</h1>
@@ -145,6 +136,15 @@ export default function CommunityPost() {
                 )}
                 <button type="button" onClick={handleFlag} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', color: 'var(--muted)', fontSize: '0.82rem', fontWeight: 400, textDecoration: 'underline', fontFamily: 'inherit' }}>report post</button>
               </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0, minWidth: 40 }}>
+              <button type="button" onClick={() => vote(parseInt(id), 'up')} disabled={!user} style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'up' ? 'var(--accent)' : '#ccc', lineHeight: 0 }} aria-label="Upvote">
+                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 4 4 16h16z"/></svg>
+              </button>
+              <span style={{ fontWeight: 900, fontSize: '1.1rem', lineHeight: 1.2 }}>{post.score ?? 0}</span>
+              <button type="button" onClick={() => vote(parseInt(id), 'down')} disabled={!user} style={{ background: 'none', border: 'none', cursor: user ? 'pointer' : 'not-allowed', padding: 2, color: myVote === 'down' ? 'var(--accent)' : '#ccc', lineHeight: 0 }} aria-label="Downvote">
+                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 20 4 8h16z"/></svg>
+              </button>
             </div>
           </div>
         </article>
