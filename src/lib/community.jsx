@@ -18,25 +18,22 @@ export function CommunityProvider({ children }) {
   const [myVotes, setMyVotes] = useState({})
   const [loading, setLoading] = useState(true)
   const [searchTag, setSearchTag] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  const loadPosts = useCallback((tag) => {
+  function fetchPosts(tag) {
     if (!supabase) { setLoading(false); return }
-    let query = supabase
-      .from('community_posts')
-      .select('id, title, body, author_id, created_at, score, tags')
-      .eq('status', 'approved')
-      .order('score', { ascending: false })
-      .order('created_at', { ascending: false })
-    if (tag) query = query.contains('tags', [tag])
-    query.then(({ data }) => {
+    setLoading(true)
+    let q = supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags').eq('status', 'approved').order('score', { ascending: false }).order('created_at', { ascending: false })
+    if (tag) q = q.contains('tags', [tag])
+    q.then(({ data }) => {
       if (data) setPosts(data)
       setLoading(false)
     })
-  }, [])
+  }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadPosts(searchTag)
+    fetchPosts(searchTag)
 
     if (!supabase) return
     const channel = supabase
@@ -58,17 +55,19 @@ export function CommunityProvider({ children }) {
       .subscribe()
 
     function refetch() {
+      if (!supabase) return
       let q = supabase.from('community_posts').select('id, title, body, author_id, created_at, score, tags').eq('status', 'approved').order('score', { ascending: false }).order('created_at', { ascending: false })
       if (searchTag) q = q.contains('tags', [searchTag])
       q.then(({ data }) => { if (data) setPosts(data) })
     }
-
     const handleFocus = () => refetch()
     document.addEventListener('visibilitychange', handleFocus)
     window.addEventListener('focus', handleFocus)
 
     return () => { supabase.removeChannel(channel); document.removeEventListener('visibilitychange', handleFocus); window.removeEventListener('focus', handleFocus) }
-  }, [searchTag, loadPosts])
+  }, [searchTag, refreshKey])
+
+  const refresh = useCallback(() => setRefreshKey(k => k + 1), [])
 
   useEffect(() => {
     if (!supabase || !user || posts.length === 0) return
@@ -106,10 +105,6 @@ export function CommunityProvider({ children }) {
       return next
     })
   }, [user, myVotes])
-
-  const refresh = useCallback(() => {
-    loadPosts(searchTag)
-  }, [loadPosts, searchTag])
 
   return (
     <CommunityContext.Provider value={{ posts, myVotes, loading, vote, refresh, searchTag, setSearchTag }}>
