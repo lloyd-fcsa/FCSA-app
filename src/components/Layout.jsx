@@ -17,21 +17,33 @@ function TopNav() {
 
   return (
     <div className="topnav" role="navigation" aria-label="Page navigation">
-      <button
-        type="button"
-        className="topnav__btn"
-        onClick={() => {
-          if (window.history.length > 1) navigate(-1)
-          else navigate('/')
-        }}
-        aria-label="Go back"
-        disabled={isHome}
-        style={isHome ? { visibility: 'hidden' } : undefined}
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" d="M15 5 8 12l7 7V5z" />
-        </svg>
-      </button>
+      <div className="topnav__left">
+        <button
+          type="button"
+          className="topnav__btn"
+          onClick={() => {
+            if (window.history.length > 1) navigate(-1)
+            else navigate('/')
+          }}
+          aria-label="Go back"
+          disabled={isHome}
+          style={isHome ? { visibility: 'hidden' } : undefined}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M15 5 8 12l7 7V5z" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          className="topnav__btn"
+          onClick={() => navigate(1)}
+          aria-label="Go forward"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" style={{ transform: 'scaleX(-1)' }}>
+            <path fill="currentColor" d="M15 5 8 12l7 7V5z" />
+          </svg>
+        </button>
+      </div>
 
       <div className="topnav__right">
         <button type="button" className="topnav__btn" aria-label="Notifications" disabled>

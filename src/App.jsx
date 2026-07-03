@@ -19,9 +19,11 @@ import NewsHub from './pages/NewsHub.jsx'
 import CeoBlog from './pages/CeoBlog.jsx'
 import Resources from './pages/Resources.jsx'
 import Community from './pages/Community.jsx'
+import CommunityPost from './pages/CommunityPost.jsx'
 import Auth from './pages/Auth.jsx'
 import AdminHome from './pages/admin/AdminHome.jsx'
 import AdminForum from './pages/admin/AdminForum.jsx'
+import AdminCommunity from './pages/admin/AdminCommunity.jsx'
 
 export default function App() {
   return (
@@ -46,9 +48,11 @@ export default function App() {
         <Route path="/news/:slug" element={<NewsPost />} />
         <Route path="/resources" element={<Resources />} />
         <Route path="/community" element={<Community />} />
+        <Route path="/community/:id" element={<CommunityPost />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/admin" element={<AdminHome />} />
         <Route path="/admin/forum" element={<AdminForum />} />
+        <Route path="/admin/community" element={<AdminCommunity />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

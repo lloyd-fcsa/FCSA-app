@@ -8,6 +8,7 @@ const sections = [
   { to: '/admin/events', label: 'Events', icon: 'M7 3v2M17 3v2M4 7h16', disabled: true },
   { to: '/admin/members', label: 'Members', icon: 'M12 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', disabled: true },
   { to: '/admin/codes', label: 'Codes', icon: 'M6 2h8l4 4v16H6z', disabled: true },
+  { to: '/admin/community', label: 'Community', icon: 'M4 4h16v10H7l-3 3z' },
 ]
 
 export default function AdminShell({ children, title }) {
