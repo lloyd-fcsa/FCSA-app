@@ -76,6 +76,12 @@ export default function CommunityPost() {
       })
   }, [id])
 
+  async function handleDelete() {
+    if (!confirm('Delete this post? This cannot be undone.')) return
+    const { error } = await supabase.from('community_posts').delete().eq('id', id)
+    if (!error) window.location.href = '/community'
+  }
+
   async function handleVote(voteType) {
     if (!user) return
     const { error: err } = await supabase.rpc('vote_post', {
@@ -174,7 +180,14 @@ export default function CommunityPost() {
               </button>
             </div>
             <div style={{ flex: 1 }}>
-              <p className="news-post__meta">{timeAgo(post.created_at)}</p>
+              <div className="news-post__bar" style={{ marginBottom: 4 }}>
+                <p className="news-post__meta" style={{ margin: 0 }}>{timeAgo(post.created_at)}</p>
+                {user?.id === post.author_id && (
+                  <button type="button" className="back-link" style={{ color: '#c0392b' }} onClick={handleDelete}>
+                    Delete
+                  </button>
+                )}
+              </div>
               <h1 className="news-post__title" style={{ marginBottom: 16 }}>{post.title}</h1>
               {post.tags && post.tags.length > 0 && (
                 <div style={{ display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap' }}>
