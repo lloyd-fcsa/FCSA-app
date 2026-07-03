@@ -19,12 +19,12 @@ export default function AdminCommunity() {
     Promise.all([
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, profiles!inner(display_name)')
+        .select('id, title, body, author_id, created_at')
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, profiles!inner(display_name)')
+        .select('id, title, body, author_id, created_at')
         .eq('status', 'approved')
         .order('created_at', { ascending: false }),
     ]).then(([pendingRes, approvedRes]) => {
@@ -41,12 +41,12 @@ export default function AdminCommunity() {
     const [pendingRes, approvedRes] = await Promise.all([
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, profiles!inner(display_name)')
+        .select('id, title, body, author_id, created_at')
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
       supabase
         .from('community_posts')
-        .select('id, title, body, author_id, created_at, profiles!inner(display_name)')
+        .select('id, title, body, author_id, created_at')
         .eq('status', 'approved')
         .order('created_at', { ascending: false }),
     ])
@@ -95,7 +95,7 @@ export default function AdminCommunity() {
               <p className="card__badge" style={{ marginBottom: 8 }}>{post.status}</p>
               <h3 style={{ margin: '0 0 6px' }}>{post.title}</h3>
               <p className="muted" style={{ fontSize: '0.85rem', margin: '0 0 4px' }}>
-                {post.profiles?.display_name || 'Anonymous'} · {new Date(post.created_at).toLocaleDateString()}
+                {new Date(post.created_at).toLocaleDateString()}
               </p>
               <p style={{ fontSize: '0.92rem', margin: '0 0 12px' }}>{post.body}</p>
               {tab === 'pending' && (
